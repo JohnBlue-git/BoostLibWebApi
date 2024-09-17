@@ -12,7 +12,7 @@
 
 //https://medium.com/@AlexanderObregon/building-restful-apis-with-c-4c8ac63fe8a7
 
-//(rm -rf * && cmake .. && make)
+//rm -rf * && cmake .. && make
 //./RestfulApi
 
 //curl -v http://localhost:8080
@@ -37,6 +37,8 @@ using tcp = net::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
     // Respond to GET request with "Hello, World!"
     if (req.method() == http::verb::get) {
+        std::cout << "get" << std::endl;
+
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "text/plain");
@@ -45,6 +47,8 @@ http::response<http::string_body> handle_request(http::request<http::string_body
         res.prepare_payload();
         return res;
     }
+
+    std::cout << "request end" << std::endl;
 
     // Default response for unsupported methods
     return http::response<http::string_body>{http::status::bad_request, req.version()};
@@ -66,19 +70,20 @@ public:
 private:
     void do_read() {
         auto self(shared_from_this());
-        http::async_read(socket_, buffer_, req_, [this, self](beast::error_code ec, std::size_t) {
-            if (!ec) {
+        http::read(socket_, buffer_, req_);//, [this, self](beast::error_code ec, std::size_t) {
+            //if (!ec) {
                 do_write(handle_request(req_));
-            }
-        });
+            //}
+        //});
     }
 
     void do_write(http::response<http::string_body> res) {
         auto self(shared_from_this());
         auto sp = std::make_shared<http::response<http::string_body>>(std::move(res));
-        http::async_write(socket_, *sp, [this, self, sp](beast::error_code ec, std::size_t) {
-            socket_.shutdown(tcp::socket::shutdown_send, ec);
-        });
+        http::write(socket_, *sp);//, [this, self, sp](beast::error_code ec, std::size_t) {
+            //socket_.shutdown(tcp::socket::shutdown_send, ec);
+            socket_.close();
+        //});
     }
 };
 
@@ -125,12 +130,27 @@ public:
 
 private:
     void do_accept() {
+        
+        for (;;) {
+            std::cout << "accept:" << std::endl;
+            tcp::socket socket{ioc_};
+            acceptor_.accept(socket);
+
+            // 1
+            std::make_shared<Session>(std::move(socket))->run();
+            // 2
+            //std::thread(&Session::run, std::make_shared<Session>(std::move(socket))).detach();
+        }
+        
+        /*
+        std::cout << "accept:" << std::endl;
         acceptor_.async_accept(net::make_strand(ioc_), [this](beast::error_code ec, tcp::socket socket) {
             if (!ec) {
                 std::make_shared<Session>(std::move(socket))->run();
             }
             do_accept();
         });
+        */
     }
 };
 
