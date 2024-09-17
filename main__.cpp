@@ -1,22 +1,6 @@
 
 
-//sudo add-apt-repository universe
-//sudo apt-get update
-//sudo apt-get install libboost-all-dev
-
-//https://askubuntu.com/questions/806478/xenial-16-04-cannot-find-package-libboost-all-dev
-
-//apt search libboost
-//dpkg -s libboost-dev | grep 'Version'
-
-
-//https://medium.com/@AlexanderObregon/building-restful-apis-with-c-4c8ac63fe8a7
-
-//rm -rf * && cmake .. && make
-//./RestfulApi
-
-//curl -v http://localhost:8080
-
+// Resource Management: Used shared_from_this() to manage the lifetime of asynchronous operations properly.
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -55,7 +39,7 @@ http::response<http::string_body> handle_request(http::request<http::string_body
     return http::response<http::string_body>{http::status::bad_request, req.version()};
 }
 
-// This class handles an HTTP server connection.
+
 class Session : public std::enable_shared_from_this<Session> {
     tcp::socket socket_;
     beast::flat_buffer buffer_;
@@ -71,32 +55,38 @@ public:
 private:
     void do_read() {
         auto self(shared_from_this());
-        http::read(socket_, buffer_, req_);
-                do_write(handle_request(req_));
-
-/*
-        http::async_read(socket_, buffer_, req_, [this, self](beast::error_code ec, std::size_t) {
-            if (!ec) {
-                do_write(handle_request(req_));
-            }
-        });*/
+        http::async_read(socket_, buffer_, req_,
+            [self](beast::error_code ec, std::size_t) {
+                if (!ec) {
+                    self->do_write(handle_request(self->req_));
+                } else {
+                    std::cerr << "Read error: " << ec.message() << std::endl;
+                }
+            });
     }
 
     void do_write(http::response<http::string_body> res) {
         auto self(shared_from_this());
         auto sp = std::make_shared<http::response<http::string_body>>(std::move(res));
-        http::async_write(socket_, *sp, [this, self, sp](beast::error_code ec, std::size_t) {
-            //socket_.shutdown(tcp::socket::shutdown_send, ec);
-            socket_.close();
-        });
+        http::async_write(socket_, *sp,
+            [self, sp](beast::error_code ec, std::size_t) {
+                if (!ec) {
+                    beast::error_code ec;
+                    self->socket_.shutdown(tcp::socket::shutdown_send, ec);
+                    if (ec) {
+                        std::cerr << "Shutdown error: " << ec.message() << std::endl;
+                    }
+                } else {
+                    std::cerr << "Write error: " << ec.message() << std::endl;
+                }
+            });
     }
 };
 
-// This class accepts incoming connections and launches the sessions.
+
 class Listener : public std::enable_shared_from_this<Listener> {
     net::io_context& ioc_;
     tcp::acceptor acceptor_;
-    bool accepting_ = true; // Flag to indicate whether accepting is allowed
 
 public:
     Listener(net::io_context& ioc, tcp::endpoint endpoint)
@@ -135,69 +125,21 @@ public:
     }
 
 private:
-
     void do_accept() {
-        /*
-        for (;;) {
-            
-            std::cout << "accept:" << std::endl;
-            tcp::socket socket{ioc_};
-            acceptor_.accept(socket);
-
-            // 1
-            std::make_shared<Session>(std::move(socket))->run();
-            // 2
-            //std::thread(&Session::run, std::make_shared<Session>(std::move(socket))).detach();
-        }
-        */
-
-
         acceptor_.async_accept(net::make_strand(ioc_),
-            [this](beast::error_code ec, tcp::socket socket) {
+            [self = shared_from_this()](beast::error_code ec, tcp::socket socket) {
                 if (!ec) {
                     std::make_shared<Session>(std::move(socket))->run();
                 } else {
                     std::cerr << "Accept error: " << ec.message() << std::endl;
                 }
                 // Start accepting the next connection
-                do_accept();
+                self->do_accept();
             });
-
-/*
-Key Points:
-Check Socket State: Ensure that the tcp::acceptor is not closed or invalid when async_accept is called. The acceptor should remain open and valid while accepting connections.
-Error Logging: Log detailed errors for open, bind, listen, and async_accept operations to identify and resolve issues promptly.
-Asynchronous Continuation: Always restart the asynchronous accept operation in the do_accept method after handling a connection or encountering an error.
-Thread Safety: Ensure that Boost.Asio operations and handlers are used in a thread-safe manner, especially when using net::make_strand.
-*/
-
-
-        /*
-        std::cout << "accept:" << std::endl;
-        acceptor_.async_accept(net::make_strand(ioc_), [this](beast::error_code ec, tcp::socket socket) {
-            if (!ec) {
-                std::make_shared<Session>(std::move(socket))->run();
-            }
-            do_accept();
-        });
-        */
     }
-
-public:
-    void stop() {
-        accepting_ = false;
-        beast::error_code ec;
-        acceptor_.cancel(ec); // Cancel any pending operations
-        if (ec) {
-            std::cerr << "Cancel error: " << ec.message() << std::endl;
-        }
-        acceptor_.close(ec); // Close the acceptor
-        if (ec) {
-            std::cerr << "Close error: " << ec.message() << std::endl;
-        }
-    }
-
 };
+
+
 
 int main() {
     try {
@@ -206,19 +148,9 @@ int main() {
 
         net::io_context ioc;
 
-        auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, port});
+        std::make_shared<Listener>(ioc, tcp::endpoint{address, port});
 
-        // Run the io_context in a separate thread if desired
-        std::thread t([&ioc]() { ioc.run(); });
-
-        // Simulate server running for some time
-        std::this_thread::sleep_for(std::chrono::seconds(300));
-
-        // Stop the server
-        listener->stop();
-
-        // Wait for the io_context to finish
-        t.join();
+        ioc.run();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
