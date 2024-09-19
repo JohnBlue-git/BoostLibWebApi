@@ -17,6 +17,16 @@
 
 //curl -v http://localhost:8080
 
+/*
+-X/--request [GET|POST|PUT|DELETE|PATCH]  使用指定的 http method 來發出 http request
+-H/--header                           設定 request 裡所攜帶的 header
+-i/--include                          在 output 顯示 response 的 header
+-d/--data                             攜帶 HTTP POST Data 
+-v/--verbose                          輸出更多的訊息方便 debug
+-u/--user                             攜帶使用者帳號、密碼
+-b/--cookie                           攜帶 cookie（可以是參數或是檔案位置）
+*/
+
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -210,15 +220,15 @@ int main() {
 
         // Run the io_context in a separate thread if desired
         std::thread t([&ioc]() { ioc.run(); });
-
-        // Simulate server running for some time
-        std::this_thread::sleep_for(std::chrono::seconds(300));
-
-        // Stop the server
-        listener->stop();
-
+        {
+            // Simulate server running for some time
+            std::this_thread::sleep_for(std::chrono::seconds(300));
+            // Stop the server
+            listener->stop();
+        }        
         // Wait for the io_context to finish
         t.join();
+
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
