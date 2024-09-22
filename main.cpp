@@ -34,10 +34,35 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
+
+
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
+#include <csignal>
+#include <unistd.h>
+#include <semaphore.h>
+
+class WaitToClose {
+private:
+    static sem_t semaphore;
+
+public:
+    static void initSema() {
+        sem_init(&semaphore, 0, 0);
+    }
+    static void waitSignal() {
+        //std::cout << "Wait for signal " << std::endl;
+        sem_wait(&semaphore);
+    }
+    static void signalHandler(int signum) {
+        //std::cout << "Caught signal " << signum << ". Exiting..." << std::endl;
+        sem_post(&semaphore);
+        sem_destroy(&semaphore);
+    }
+};
+
 
 namespace beast = boost::beast; // from <boost/beast.hpp>
 namespace http = beast::http;   // from <boost/beast/http.hpp>
@@ -101,6 +126,9 @@ private:
         });
     }
 };
+
+// Initialize static member
+sem_t WaitToClose::semaphore;
 
 // This class accepts incoming connections and launches the sessions.
 class Listener : public std::enable_shared_from_this<Listener> {
@@ -218,6 +246,13 @@ int main() {
 
         auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, port});
 
+        ioc.run();
+
+        WaitToClose::initSema();
+        signal(SIGINT, WaitToClose::signalHandler);// Register signal handler for SIGINT (Ctrl+C)
+        WaitToClose::waitSignal();
+
+/*
         // Run the io_context in a separate thread if desired
         std::thread t([&ioc]() { ioc.run(); });
         {
@@ -228,7 +263,7 @@ int main() {
         }        
         // Wait for the io_context to finish
         t.join();
-
+*/
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
