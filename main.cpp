@@ -81,23 +81,23 @@ public:
 private:
     void do_read() {
         auto self(shared_from_this());
-        http::read(socket_, buffer_, req_);
-                do_write(handle_request(req_));
+        //http::read(socket_, buffer_, req_);
+        //        do_write(handle_request(req_));
 
-/*
-        http::async_read(socket_, buffer_, req_, [this, self](beast::error_code ec, std::size_t) {
+
+        http::async_read(self->socket_, self->buffer_, self->req_, [self](beast::error_code ec, std::size_t) {
             if (!ec) {
-                do_write(handle_request(req_));
+                self->do_write(handle_request(self->req_));
             }
-        });*/
+        });
     }
 
     void do_write(http::response<http::string_body> res) {
         auto self(shared_from_this());
         auto sp = std::make_shared<http::response<http::string_body>>(std::move(res));
-        http::async_write(socket_, *sp, [this, self, sp](beast::error_code ec, std::size_t) {
+        http::async_write(self->socket_, *sp, [self, sp](beast::error_code ec, std::size_t) {
             //socket_.shutdown(tcp::socket::shutdown_send, ec);
-            socket_.close();
+            self->socket_.close();
         });
     }
 };
