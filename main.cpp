@@ -44,7 +44,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 
-class WaitToClose {
+class Fence {
 private:
     static sem_t semaphore;
 
@@ -62,6 +62,9 @@ public:
         sem_destroy(&semaphore);
     }
 };
+// Initialize static member
+sem_t Fence::semaphore;
+
 
 
 namespace beast = boost::beast; // from <boost/beast.hpp>
@@ -127,8 +130,6 @@ private:
     }
 };
 
-// Initialize static member
-sem_t WaitToClose::semaphore;
 
 // This class accepts incoming connections and launches the sessions.
 class Listener : public std::enable_shared_from_this<Listener> {
@@ -248,9 +249,11 @@ int main() {
 
         ioc.run();
 
-        WaitToClose::initSema();
-        signal(SIGINT, WaitToClose::signalHandler);// Register signal handler for SIGINT (Ctrl+C)
-        WaitToClose::waitSignal();
+        Fence::initSema();
+        signal(SIGINT, Fence::signalHandler);// Register signal handler for SIGINT (Ctrl+C)
+        signal(SIGTERM, Fence::signalHandler);// Register signal handler for kill process
+        //signal(SIGKILL, Fence::signalHandler);// cannot because only OS will handle this (for immediate terminate)
+        Fence::waitSignal();
 
 /*
         // Run the io_context in a separate thread if desired
