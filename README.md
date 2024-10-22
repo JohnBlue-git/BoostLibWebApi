@@ -87,59 +87,75 @@ namespace http = beast::http;   // from <boost/beast/http.hpp>
 namespace net = boost::asio;    // from <boost/asio.hpp>
 using tcp = net::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
+//
+// Handle request functions
+//
+
+// Prepare response
+void prepareResponse(http::request<http::string_body> const& req, http::response<http::string_body>& res, const nlohmann::json& json_response) {
+    res.set(http::field::server, "Beast");
+    res.set(http::field::content_type, "application/json");
+    res.keep_alive(req.keep_alive());
+    res.body() = json_response.dump();
+    res.prepare_payload();
+}
+
 // This function produces an HTTP response for the given request.
 http::response<http::string_body> handle_request(http::request<http::string_body> const& req) {
-    if (req.method() == http::verb::get && req.target() == "/api/message") {
-        // Handle GET request
+    // Default response for unsupported url
+    if (req.target() != "/api/message") {
+        http::response<http::string_body> res{http::status::bad_request, req.version()};
+        nlohmann::json json_response = {{"error", "This URL is not supported"}};
+        prepareResponse(req, res, json_response);
+        return res;
+    }
+
+      // Handle GET request
+    if (req.method() == http::verb::get) {
         nlohmann::json json_response = {{"message", "This is a GET request"}};
         http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "application/json");
-        res.keep_alive(req.keep_alive());
-        res.body() = json_response.dump();
-        res.prepare_payload();
+        prepareResponse(req, res, json_response);
         return res;
-    } else if (req.method() == http::verb::post && req.target() == "/api/message") {
-        // Handle POST request
+
+    } // Handle POST request
+    else if (req.method() == http::verb::post) {
         auto json_request = nlohmann::json::parse(req.body());
         std::string response_message = "Received: " + json_request.dump();
         nlohmann::json json_response = {{"message", response_message}};
         http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "application/json");
-        res.keep_alive(req.keep_alive());
-        res.body() = json_response.dump();
-        res.prepare_payload();
+        prepareResponse(req, res, json_response);
         return res;
-    } else if (req.method() == http::verb::put && req.target() == "/api/message") {
-        // Handle PUT request
+
+    } // Handle PUT request
+    else if (req.method() == http::verb::put) {
         auto json_request = nlohmann::json::parse(req.body());
         std::string response_message = "Updated: " + json_request.dump();
         nlohmann::json json_response = {{"message", response_message}};
         http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "application/json");
-        res.keep_alive(req.keep_alive());
-        res.body() = json_response.dump();
-        res.prepare_payload();
+        prepareResponse(req, res, json_response);
         return res;
-    } else if (req.method() == http::verb::delete_ && req.target() == "/api/message") {
-        // Handle DELETE request
+
+    } // Handle DELETE request
+    else if (req.method() == http::verb::delete_) {
         nlohmann::json json_response = {{"message", "Resource deleted"}};
         http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "application/json");
-        res.keep_alive(req.keep_alive());
-        res.body() = json_response.dump();
-        res.prepare_payload();
+        prepareResponse(req, res, json_response);
+        return res;
+
+    } // Default response for unsupported methods
+    else {
+        http::response<http::string_body> res{http::status::bad_request, req.version()};
+        nlohmann::json json_response = {{"error", "This method is not supported"}};
+        prepareResponse(req, res, json_response);
         return res;
     }
-
-    // Default response for unsupported methods
-    return http::response<http::string_body>{http::status::bad_request, req.version()};
 }
 
-// This class handles an HTTP server connection.
+//
+// Session
+//
+
+// Create seesion to handle HTTP request.
 class Session : public std::enable_shared_from_this<Session> {
     tcp::socket socketID;
     beast::flat_buffer buffer;
@@ -174,7 +190,11 @@ private:
     }
 };
 
-// This class accepts incoming connections and launches the sessions.
+//
+// Listner
+//
+
+// Listner (or server) that accepts incoming connections and launches sessions.
 class Listener : public std::enable_shared_from_this<Listener> {
     net::io_context& ioc;
     tcp::acceptor acpt;
@@ -236,6 +256,10 @@ public:
             });
     }
 };
+
+//
+// Main
+//
 
 int main() {
     try {
