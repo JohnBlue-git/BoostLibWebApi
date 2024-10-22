@@ -1,7 +1,49 @@
 #include "../include/controllers/person_controller.hpp"
 
-void PersonController::getPersons(Context &ctx) {
-  auto &res = ctx.getResponse();
+void PersonController::handleRequest(Context& ctx) {
+  const http::request<http::string_body>& req = ctx.getRequest();
+
+  const std::string path(req.target());
+  std::smatch matches;
+  std::regex pattern(R"(^/[^/]+(?:/[^/]+)?(?:/(\d+))?$)");
+  std::regex_match(path, matches, pattern);
+
+  http::status status;
+  std::string jsonStr;
+
+	if (matches[1].matched) { // Check if ID exists
+		int id = std::stoi(matches[1]); // Extracting the {id}
+
+		if (req.method() == GET) {
+      std::tie(status, jsonStr) = PersonController::getPersonById(id);
+		}
+		else if (req.method() == DELETE) {
+			std::tie(status, jsonStr) = PersonController::deletePersonById(id);
+		}
+		//else if (req.method() == PUT) {
+		//	PersonController::putPersonById(req, id);
+		//}
+    else {
+      status = http::status::not_found;
+      jsonStr = "{\"error\": \"Method not found.\"}";
+    }
+	}
+	else if (req.method() == GET) {
+    std::tie(status, jsonStr) = PersonController::getPersons();
+	}
+	else if (req.method() == POST) {
+		std::tie(status, jsonStr) = PersonController::createPerson(req);
+	}
+  else {
+    status = http::status::not_found;
+    jsonStr = "{\"error\": \"Method not found.\"}";
+  }
+
+  ctx.setJsonResponse(status, jsonStr);
+}
+
+std::tuple<http::status, std::string> PersonController::getPersons() {
+  std::string jsonString;
 
   try {
     auto persons = personService->getAllPersons();
@@ -10,27 +52,23 @@ void PersonController::getPersons(Context &ctx) {
     for (const auto &person : persons) {
       jsonArray.push_back(PersonSerializer::toJson(person));
     }
-    std::string jsonString = boost::json::serialize(jsonArray);
+    jsonString = boost::json::serialize(jsonArray);
 #else
     nlohmann::json jsonArray;
     for (const auto &person : persons) {
       jsonArray.push_back(PersonSerializer::toJson(person));
     }
-    std::string jsonString = jsonArray.dump();
+    jsonString = jsonArray.dump();
 #endif
-    res.result(http::status::ok);
-    res.body() = jsonString;
-    res.set(http::field::content_type, "application/json");
-  } catch (const std::exception &e) {
-    res.result(http::status::internal_server_error);
-    res.body() = "{\"error\": \"Failed to serialize persons.\"}";
-    res.set(http::field::content_type, "application/json");
+
+    return { http::status::ok, jsonString };
+  }
+  catch (const std::exception &e) {
+    return { http::status::internal_server_error, "{\"error\": \"Failed to serialize persons.\"}" };
   }
 }
 
-void PersonController::createPerson(Context &ctx) {
-  auto &req = ctx.getRequest();
-  auto &res = ctx.getResponse();
+std::tuple<http::status, std::string> PersonController::createPerson(const http::request<http::string_body>& req) {
 
   try {
 #ifdef BOOST_JSON
@@ -40,59 +78,53 @@ void PersonController::createPerson(Context &ctx) {
     auto json = nlohmann::json::parse(req.body());
     auto person = PersonSerializer::fromJson(json);
 #endif
+
     personService->addPerson(person);
-    res.result(http::status::created);
-    res.body() = "{\"success\": \"Person created.\"}";
-    res.set(http::field::content_type, "application/json");
-  } catch (const std::exception &e) {
-    res.result(http::status::bad_request);
-    res.body() = "Invalid JSON payload";
+    
+    return { http::status::created, "{\"success\": \"Person created.\"}" };
+  }
+  catch (const std::exception &e) {
+    return { http::status::bad_request, "{\"error\": \"Invalid JSON payload.\"}" };
   }
 }
 
-void PersonController::getPersonById(Context &ctx) {
-  auto &res = ctx.getResponse();
+std::tuple<http::status, std::string> PersonController::getPersonById(int id) {
+  std::string jsonString;
 
   try {
-    unsigned int id = std::atoi(ctx.getParam("id").c_str());
     auto person = personService->getPersonById(id);
+
     if (person) {
 #ifdef BOOST_JSON
-      std::string jsonString = boost::json::serialize(PersonSerializer::toJson(*person)); // return optional 用法
-      //std::string jsonString = boost::json::serialize(PersonSerializer::toJson(person.value())); // return optional 用法
+      jsonString = boost::json::serialize(PersonSerializer::toJson(*person)); // return optional 用法
+      //jsonString = boost::json::serialize(PersonSerializer::toJson(person.value())); // return optional 用法
 #else
-      std::string jsonString = PersonSerializer::toJson(*person).dump(); // return optional 用法
-      //std::string jsonString = PersonSerializer::toJson(person.value()).dump(); // return optional 用法
+      jsonString = PersonSerializer::toJson(*person).dump(); // return optional 用法
+      //jsonString = PersonSerializer::toJson(person.value()).dump(); // return optional 用法
 #endif
-      res.result(http::status::ok);
-      res.body() = jsonString;
-      res.set(http::field::content_type, "application/json");
-    } else {
-      res.result(http::status::not_found);
-      res.body() = "{\"error\": \"Person not found.\"}";
-      res.set(http::field::content_type, "application/json");
+
+      return { http::status::ok, jsonString };
     }
-  } catch (const std::exception &e) {
-    res.result(http::status::internal_server_error);
-    res.body() = "{\"error\": \"Failed to serialize persons.\"}";
-    res.set(http::field::content_type, "application/json");
+    else {
+      return { http::status::not_found, "{\"error\": \"Person not found.\"}" };
+    }
+  }
+  catch (const std::exception &e) {
+    return { http::status::internal_server_error, "{\"error\": \"Failed to serialize persons.\"}" };
   }
 }
 
-void PersonController::deletePersonById(Context &ctx) {
-  auto &res = ctx.getResponse();
+std::tuple<http::status, std::string> PersonController::deletePersonById(int id) {
 
   try {
-    unsigned int id = std::atoi(ctx.getParam("id").c_str());
-
     if (personService->deletePersonById(id)) {
-      res.result(http::status::no_content);
-    } else {
-      res.result(http::status::not_found);
-      res.body() = "{\"error\": \"Person not found.\"}";
-      res.set(http::field::content_type, "application/json");
+      return { http::status::no_content, "{}" };
     }
-  } catch (const std::exception &e) {
-    res.result(http::status::internal_server_error);
+    else {
+      return { http::status::not_found, "{\"error\": \"Person not found.\"}" };
+    }
+  }
+  catch (const std::exception &e) {
+    return { http::status::internal_server_error, "{\"error\": \"Failed to delete person.\"}" };
   }
 }

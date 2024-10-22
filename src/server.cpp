@@ -64,20 +64,20 @@ Thread Safety: Ensure that Boost.Asio operations and handlers are used in a thre
 
 void BaseServer::session(tcp::socket socket) {
   try {
-    beast::flat_buffer buffer;
-    http::request<http::string_body> req;
-    http::read(socket, buffer, req);
-    http::response<http::string_body> res;
-    auto ctx = Context(req, res);
+		Context ctx;
+		http::request<http::string_body>& req = ctx.getRequest();
+		http::response<http::string_body>& res = ctx.getResponse();
 
-    // Delegate the routing to the Router instance
-    if (!router->route(ctx)) {
-      // If no route matches, respond with Not Found
-      res.result(http::status::not_found);
-      res.body() = "Resource not found";
+    beast::flat_buffer buffer;
+    http::read(socket, buffer, req);
+
+		std::string path(req.target());
+    if ( router->contains(path) ) {
+	    router->getController(path)->handleRequest(ctx);
     }
-    if (res.body().length() != 0)
-      res.prepare_payload();
+    else {
+	    ctx.setJsonResponse(http::status::not_found, "{\"error\": \"Resource not found.\"}");
+    }
 
     http::write(socket, res);
 
