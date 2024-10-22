@@ -1,32 +1,23 @@
 #pragma once
 
-#include <functional>
-#include <map>
-#include <memory>
 #include <regex>
-#include <string>
+#include <unordered_map>
 #include <boost/beast.hpp>
 
-#include "context.hpp"
+#include "../include/controllers/person_controller.hpp"
 
 namespace http = boost::beast::http;
 
 class Router {
 private:
-  struct RouteInfo {
-    http::verb method;
-    std::string pathPattern;
-    std::function<void(Context &)> handler;
-  };
-
-  std::vector<RouteInfo> routes;
-  std::string prefix;
-
-  std::vector<std::string> splitPath(const std::string &path);
+  std::unordered_map<std::string, std::shared_ptr<IController>> routes;
 
 public:
-  void addRoute(http::verb method, const std::string &pathPattern,
-                std::function<void(Context &)> handler);
-  bool route(Context &ctx);
-  void setPrefix(const std::string &prefix);
+  void addRoute(const std::string &URL, std::shared_ptr<IController> controller);
+  bool contains(const std::string &URL);
+  std::shared_ptr<IController> getController(const std::string &URL);
+
+private:
+	bool isURL(const std::string &URL);
+	std::string removeNumberFromURL(const std::string& URL);
 };

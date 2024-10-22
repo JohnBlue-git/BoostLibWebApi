@@ -1,72 +1,41 @@
 #include "../include/router.hpp"
 
-void Router::addRoute(http::verb method, const std::string &pathPattern,
-                      std::function<void(Context &)> handler) {
-  routes.push_back({method, pathPattern, handler});
+bool Router::isURL(const std::string &URL) {
+  std::smatch matches;
+  std::regex pattern(R"(^/[^/]+(?:/[^/]+)?(?:/(\d+))?$)");
+  return std::regex_match(URL, matches, pattern);
 }
 
-bool Router::route(Context &ctx) {
-  const auto &req = ctx.getRequest();
-  std::string target = std::string(req.target());
-
-  // Adjust for any potential prefix mismatch or trailing slash
-  if (!prefix.empty() && target.find(prefix) == 0) {
-    target.erase(0, prefix.size());
-  }
-  if (!target.empty() && target.back() == '/') {
-    target.pop_back();
-  }
-
-  for (const auto &routeInfo : routes) {
-    if (req.method() != routeInfo.method)
-      continue;
-
-    std::vector<std::string> targetSegments = splitPath(target);
-    std::vector<std::string> patternSegments = splitPath(routeInfo.pathPattern);
-
-    if (targetSegments.size() != patternSegments.size())
-      continue;
-
-    bool match = true;
-    for (size_t i = 0; i < patternSegments.size(); ++i) {
-      if (patternSegments[i].front() == '{' &&
-          patternSegments[i].back() == '}') {
-        std::string paramName =
-            patternSegments[i].substr(1, patternSegments[i].length() - 2);
-        ctx.setParam(paramName, targetSegments[i]);
-      } else if (patternSegments[i] != targetSegments[i]) {
-        match = false;
-        break;
-      }
-    }
-
-    if (match) {
-      routeInfo.handler(ctx);
-      return true;
-    }
-  }
-  return false; // No matching route found
+std::string Router::removeNumberFromURL(const std::string& URL) {
+    std::regex pattern(R"(^(/[^/]+(?:/[^/]+)?)(?:/\d+)?$)");
+    return std::regex_replace(URL, pattern, "$1");
 }
 
-void Router::setPrefix(const std::string &prefix) {
-  this->prefix = prefix;
-  // Ensure the prefix is correctly formatted
-  if (!this->prefix.empty() && this->prefix.back() != '/') {
-    this->prefix += '/';
+void Router::addRoute(const std::string &URL, std::shared_ptr<IController> controller) {
+  if ( false == isURL(URL) ) {
+		perror("URL format incorrect.");
+		return;
   }
+  else if ( true == Router::contains(URL) ) {
+		perror("URL already exist.");
+		return;
+  }
+  routes[URL] = controller;
 }
 
-std::vector<std::string> Router::splitPath(const std::string &path) {
-  std::vector<std::string> segments;
-  size_t start = 0, end = 0;
-  while ((end = path.find('/', start)) != std::string::npos) {
-    if (end != start) {
-      segments.push_back(path.substr(start, end - start));
-    }
-    start = end + 1;
+bool Router::contains(const std::string &URL) {
+  if ( false == isURL(URL) ) {
+		return false;
   }
-  if (start < path.size()) {
-    segments.push_back(path.substr(start));
+	return routes.contains(removeNumberFromURL(URL));
+}
+
+std::shared_ptr<IController> Router::getController(const std::string &URL) {
+  if ( false == isURL(URL) ) {
+		return nullptr;
   }
-  return segments;
+	if ( false == routes.contains(removeNumberFromURL(URL)) ) {
+		return nullptr;
+	}
+	return routes[URL];
 }
