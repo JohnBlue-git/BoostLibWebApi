@@ -12,8 +12,13 @@ private:
   http::response<http::string_body> response;
 
 public:
-  // Constructor
+  Context(const Context&) = delete;
+  Context& operator=(const Context&) = delete;
+  Context(Context&& other) = delete;
+  Context& operator=(Context&& other) = delete;
+public:
   Context() {}
+  ~Context() {}
 
   // Getters for the request and response to provide read/write access
   http::request<http::string_body>& getRequest();

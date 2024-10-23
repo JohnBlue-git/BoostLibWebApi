@@ -23,9 +23,13 @@ cd build
 
 # build
 rm -rf * && cmake .. && make
+# build async accpet server
+rm -rf * && cmake -DUSE_ASYNC_ACCEPT=ON .. && make
+# build block accept server
+rm -rf * && cmake -DUSE_BLOCK_ACCEPT=ON .. && make
 
 # run
-./M...
+./WebApi
 ```
 
 ## Test via curl
@@ -40,10 +44,10 @@ rm -rf * && cmake .. && make
 # -b/--cookie
 
 # POST
-curl -X POST -H "Content-Type: application/json" -d '{"name": "John Doe", "age": 30}' http://localhost:6969/v1/person -v
+curl -X POST -H "Content-Type: application/json" -d '{"name": "John Doe", "age": 30}' http://localhost:1999/api/person -v
 
 # GET
-curl -X GET -H "Content-Type: application/json" http://localhost:6969/v1/person -v
+curl -X GET -H "Content-Type: application/json" http://localhost:1999/api/person -v
 ```
 
 ## A simple web api version via C++ and boost library
@@ -271,7 +275,19 @@ int main() {
         auto listener = std::make_shared<Listener>(ioc, tcp::endpoint{address, port});
         listener->do_accept();
 
-        ioc.run(); // run event loop and suspend here
+        // run event loop and suspend here
+        ioc.run();
+        /*
+        The ioc.run() in Boost.Asio is a crucial part of the library’s asynchronous I/O operations.
+        Here’s what it does:
+            Event Loop:
+                io_context.run() starts an event loop that processes all the asynchronous operations (handlers) that have been scheduled on the io_context. This loop continues running until there are no more handlers to execute or the io_context is stopped.
+            Blocking Call:
+                The run() function blocks the calling thread until all work has finished. This means it will keep the thread busy processing I/O events until there are no more events to handle or the io_context is explicitly stopped1.
+            Thread Pool:
+                Multiple threads can call io_context.run() to create a pool of threads that can concurrently process handlers. This is useful for improving performance in multi-threaded applications
+        Note that: If you are not using any asynchronous operations in Boost.Asio, you don’t need to call ioc.run().
+        */
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

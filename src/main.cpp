@@ -1,63 +1,65 @@
 #include <iostream>
-
-#include <thread>
-    // Simulate server running for some time
-    //std::this_thread::sleep_for(std::chrono::seconds(3));
-
+#include <thread> // for std::this_thread::sleep_for(std::chrono::seconds(3));
 #include <csignal>
 #include <unistd.h>
 #include <semaphore.h>
 
-#include "../include/controllers/person_controller.hpp"
 #include "../include/router.hpp"
-#include "../include/server.hpp"
 #include "../include/services/person_service.hpp"
+#include "../include/controllers/person_controller.hpp"
+#include "../include/server/block_accept_server.hpp"
+#include "../include/server/async_accept_server.hpp"
+
+//
+// Fence
+//
 
 class Fence {
 private:
     static sem_t semaphore;
-
 public:
     static void initSema() {
         sem_init(&semaphore, 0, 0);
     }
     static void waitSignal() {
-        //std::cout << "Wait for signal " << std::endl;
         sem_wait(&semaphore);
     }
     static void signalHandler(int signum) {
-        //std::cout << "Caught signal " << signum << ". Exiting..." << std::endl;
         sem_post(&semaphore);
         sem_destroy(&semaphore);
     }
 };
-// Initialize static member
-sem_t Fence::semaphore;
+sem_t Fence::semaphore; // Initialize static member
+
+//
+// Main
+//
 
 int main(void) {
   try {
+    // Crear services
     auto personService = std::make_shared<PersonService>();
     auto personController = std::make_shared<PersonController>(personService);
-
+    
+    // Register routing
     auto router = std::make_shared<Router>();
+    router->addRoute("/api/person", personController);
 
-		router->addRoute("/v1/person", personController);
-
+    // Create server
 //#if defined(ASYNC_ACCEPT)
-    auto server = AsyncAcceptServer(6969, router);
+    auto server = AsyncAcceptServer(1999, router);
 //#elif defined(BLOCK_ACCEPT)
-//    auto server = BlockAcceptServer(6969, router);
+//    auto server = BlockAcceptServer(1999, router);
 //#else
-//    auto server = BlockAcceptServer(6969, router);
+//    auto server = BlockAcceptServer(1999, router);
 //#endif
-    std::cout << "Server starting on port " << server.getPort() << std::endl;
     server.run();
+    std::cout << "Server starting on port " << server.getPort() << std::endl;
 
-
-
-
+    // Stop fence
     Fence::initSema();
-    signal(SIGINT, Fence::signalHandler);// Register signal handler for SIGINT (Ctrl+C)
+    signal(SIGINT, Fence::signalHandler);
+    signal(SIGTERM, Fence::signalHandler);
     Fence::waitSignal();
 
   } catch (std::exception const &e) {
