@@ -50,7 +50,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"name": "John Doe", "age":
 curl -X GET -H "Content-Type: application/json" http://localhost:1999/api/person -v
 ```
 
-## A simple web api version via C++ and boost library
+## Another simple web api version via C++ and boost library (if the code in this project is too complex)
 client command
 ```console
 curl -X GET http://localhost:8080/api/message -v
