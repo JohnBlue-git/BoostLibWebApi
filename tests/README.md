@@ -1,6 +1,6 @@
 # e2e tests
 
-This directory contains end-to-end tests for the MiniBoostRestAPI project, ensuring that all components work together correctly and the API behaves as expected. The tests are written using the `pytest` framework, with the `pytest-order` plugin to manage the execution order of certain tests where dependencies exist.
+This directory contains end-to-end tests for the WebApi project, ensuring that all components work together correctly and the API behaves as expected. The tests are written using the `pytest` framework, with the `pytest-order` plugin to manage the execution order of certain tests where dependencies exist.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ You can install the necessary Python packages by running:
 pip install -r requirements.txt
 ```
 
-Ensure that the MiniBoostRestAPI server is running and accessible at the expected address (default: `http://localhost:6969`).
+Ensure that the WebApi server is running and accessible at the expected address (default: `http://localhost:1999`).
 
 ## Running the Tests
 
