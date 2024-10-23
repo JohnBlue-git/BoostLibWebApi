@@ -46,13 +46,13 @@ int main(void) {
     router->addRoute("/api/person", personController);
 
     // Create server
-//#if defined(ASYNC_ACCEPT)
+#if defined(ASYNC_ACCEPT)
     auto server = AsyncAcceptServer(1999, router);
-//#elif defined(BLOCK_ACCEPT)
-//    auto server = BlockAcceptServer(1999, router);
-//#else
-//    auto server = BlockAcceptServer(1999, router);
-//#endif
+#elif defined(BLOCK_ACCEPT)
+    auto server = BlockAcceptServer(1999, router);
+#else
+    auto server = BlockAcceptServer(1999, router);
+#endif
     server.run();
     std::cout << "Server starting on port " << server.getPort() << std::endl;
 
