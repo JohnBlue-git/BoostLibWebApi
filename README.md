@@ -1,4 +1,59 @@
 
+## About this project
+
+The web api project are written using the `boost` framework. There are two type of web api server sample code provided, which are `block accept` and `async accept` type. For demonstration, person service and ... have been implemented as sample service. Also, auto tests via python and e2e have been provided in `tests` folder.
+
+## Source code structure
+
+### Tree view
+```console
+├── CMakeLists.txt
+├── include
+│   ├── context.hpp
+│   ├── controllers
+│   │   ├── interface_controller.hpp
+│   │   └── person_controller.hpp
+│   ├── models
+│   │   └── person.hpp
+│   ├── router.hpp
+│   ├── serializers
+│   │   ├── nlohmann
+│   │   │   ├── json_fwd.hpp
+│   │   │   └── json.hpp
+│   │   └── person_serializer.hpp
+│   ├── server
+│   │   ├── abstract_server.hpp
+│   │   ├── async_accept_server.hpp
+│   │   ├── block_accept_server.hpp
+│   │   └── interface_server.hpp
+│   └── services
+│       └── person_service.hpp
+├── README.md
+├── src
+│   ├── context.cpp
+│   ├── controllers
+│   │   └── person_controller.cpp
+│   ├── main.cpp
+│   ├── models
+│   │   └── person.cpp
+│   ├── router.cpp
+│   ├── serializers
+│   │   └── person_serializer.cpp
+│   ├── server
+│   │   ├── abstract_server.cpp
+│   │   ├── async_accept_server.cpp
+│   │   └── block_accept_server.cpp
+│   └── services
+│       └── person_service.cpp
+└── tests
+    ├── README.md
+    ├── requirements.txt
+    └── test_api_person.py
+```
+
+### Relationship
+(...)
+
 ## Pre-installation
 reference about install boost library (if your kernel unable install boost library easily)
 https://askubuntu.com/questions/806478/xenial-16-04-cannot-find-package-libboost-all-dev
@@ -19,12 +74,14 @@ dpkg -s libboost-dev | grep 'Version'
 ## How to buid and run
 ```console
 # to build folder
-cd build
+mkdir build && cd build
 
 # build
 rm -rf * && cmake .. && make
+
 # build async accpet server
 rm -rf * && cmake -DUSE_ASYNC_ACCEPT=ON .. && make
+
 # build block accept server
 rm -rf * && cmake -DUSE_BLOCK_ACCEPT=ON .. && make
 
@@ -32,7 +89,14 @@ rm -rf * && cmake -DUSE_BLOCK_ACCEPT=ON .. && make
 ./WebApi
 ```
 
-## Test via curl
+## Tests
+
+### Test via pytest
+We have provide e2e tests via python scripts \
+(please refer to the follwing README.md and navigate to tests folder) \
+[tests/README.md](tests/README.md)
+
+### Test via curl:
 ```console
 # curl --help
 # -X/--request [GET|POST|PUT|DELETE|PATCH]
@@ -48,6 +112,15 @@ curl -X POST -H "Content-Type: application/json" -d '{"name": "John Doe", "age":
 
 # GET
 curl -X GET -H "Content-Type: application/json" http://localhost:1999/api/person -v
+
+# PUT (not yet)
+#curl -X PUT -H "Content-Type: application/json" -d '{"name": "John Doe", "age": 30}' http://localhost:1999/api/person -v
+
+# GET
+curl -X GET -H "Content-Type: application/json" http://localhost:1999/api/person/0 -v
+
+# DELETE
+curl -X DELETE -H "Content-Type: application/json" http://localhost:1999/api/person/0 -v
 ```
 
 ## Another simple web api version via C++ and boost library (if the code in this project is too complex)
