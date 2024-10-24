@@ -118,7 +118,7 @@ std::tuple<http::status, std::string> PersonController::deletePersonById(int id)
 
   try {
     if (personService->deletePersonById(id)) {
-      return { http::status::no_content, "{}" };
+      return { http::status::no_content, "" };
     }
     else {
       return { http::status::not_found, "{\"error\": \"Person not found.\"}" };

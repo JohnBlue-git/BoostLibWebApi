@@ -28,5 +28,5 @@ public:
 
 private:
 	bool isURL(const std::string &URL);
-	std::string removeNumberFromURL(const std::string& URL);
+	std::string removeId(const std::string& URL);
 };
