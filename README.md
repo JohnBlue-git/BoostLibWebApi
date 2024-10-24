@@ -390,5 +390,5 @@ int main() {
 ```
 
 ## Other references
-...
+references about http and boost library \
 https://medium.com/@AlexanderObregon/building-restful-apis-with-c-4c8ac63fe8a7
