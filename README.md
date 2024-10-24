@@ -51,8 +51,8 @@ The web api project are written using the `boost` framework. There are two kinds
     └── test_api_person.py
 ```
 
-### Relationship
-(...)
+### Composition Relationship
+![composition relationship](doc/webapi_project.png)
 
 ## Pre-installation
 reference about install boost library (if your kernel unable install boost library easily)
