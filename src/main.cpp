@@ -4,11 +4,11 @@
 #include <unistd.h>
 #include <semaphore.h>
 
-#include "../include/router.hpp"
-#include "../include/services/person_service.hpp"
-#include "../include/controllers/person_controller.hpp"
-#include "../include/server/block_accept_server.hpp"
-#include "../include/server/async_accept_server.hpp"
+#include "router.hpp"
+#include "person_service.hpp"
+#include "person_controller.hpp"
+#include "block_accept_server.hpp"
+#include "async_accept_server.hpp"
 
 //
 // Fence

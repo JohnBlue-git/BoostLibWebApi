@@ -1,0 +1,2 @@
+option('USE_ASYNC_ACCEPT', type: 'boolean', value: false, description: 'Use async accept server')
+option('USE_BLOCK_ACCEPT', type: 'boolean', value: true, description: 'Use block accept server')

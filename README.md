@@ -1,7 +1,7 @@
 
 ## About this project
 
-The web api project are written using the `boost` framework. There are two type of web api server sample code provided, which are `block accept` and `async accept` type. For demonstration, person service and ... have been implemented as sample service. Also, auto tests via python and e2e have been provided in `tests` folder.
+The web api project are written using the `boost` framework. There are two kinds of web api server sample code provided, which are respectively using `block accept` with detached threads and `async accept` with async call. For demonstration, person service and ... have been implemented as sample service. Also, auto tests via python and e2e have been provided in `tests` folder.
 
 ## Source code structure
 
@@ -72,6 +72,8 @@ dpkg -s libboost-dev | grep 'Version'
 ```
 
 ## How to buid and run
+
+### Build with cmake
 ```console
 # to build folder
 mkdir build && cd build
@@ -85,7 +87,26 @@ rm -rf * && cmake -DUSE_ASYNC_ACCEPT=ON .. && make
 # build block accept server
 rm -rf * && cmake -DUSE_BLOCK_ACCEPT=ON .. && make
 
-# run
+```
+
+### Build with meson
+```
+# select meson.options
+#option('USE_ASYNC_ACCEPT', type: 'boolean', value: false, description: 'Use async accept server')
+#option('USE_BLOCK_ACCEPT', type: 'boolean', value: true, description: 'Use block accept server')
+
+# meson build
+rm -rf build && meson build
+
+# to build folder 
+cd build
+
+# ninja build
+ninja
+```
+
+### Run program
+```console
 ./WebApi
 ```
 

@@ -1,4 +1,4 @@
-#include "../../include/server/abstract_server.hpp"
+#include "abstract_server.hpp"
 
 AbstractServer::AbstractServer(short port, std::shared_ptr<Router> router)
   : port(port)

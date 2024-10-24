@@ -1,4 +1,4 @@
-#include "../include/controllers/person_controller.hpp"
+#include "person_controller.hpp"
 
 void PersonController::handleRequest(Context& ctx) {
   const http::request<http::string_body>& req = ctx.getRequest();

@@ -1,4 +1,4 @@
-#include "../include/router.hpp"
+#include "router.hpp"
 
 bool Router::isURL(const std::string &URL) {
   std::smatch matches;

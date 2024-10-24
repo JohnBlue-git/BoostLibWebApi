@@ -1,4 +1,4 @@
-#include "../../include/models/person.hpp"
+#include "person.hpp"
 
 unsigned int Person::num_instances = 0;
 

@@ -36,3 +36,5 @@ python3 -m pytest -v
 ## Further Information (pytest)
 
 For more details on `pytest` and writing tests, refer to the [pytest documentation](https://docs.pytest.org/en/latest/).
+
+Other reference (https://github.com/araujo88/MiniBoostRestAPI)

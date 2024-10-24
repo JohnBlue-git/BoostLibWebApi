@@ -1,4 +1,4 @@
-#include "../include/serializers/person_serializer.hpp"
+#include "person_serializer.hpp"
 
 #ifdef BOOST_JSON
 
